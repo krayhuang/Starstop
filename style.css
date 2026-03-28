@@ -364,23 +364,35 @@ header {
 
 /* ── Responsive ── */
 @media (max-width: 640px) {
-  :root { --sidebar-w: 100%; }
+  :root {
+    --sidebar-w: 100%;
+    --header-h: 52px;
+  }
+
+  header {
+    padding: 0 .75rem;
+    gap: .5rem;
+  }
 
   .container {
     flex-direction: column-reverse;
   }
 
   #sidebar {
-    height: 45%;
+    height: 32%;
     width: 100%;
     border-right: none;
     border-top: 1px solid var(--border);
   }
 
   #map {
-    height: 55%;
+    height: 68%;
+    flex: none;
   }
 
   .brand { font-size: 1rem; }
   .sub   { display: none; }
+
+  .search-wrap { max-width: none; }
+  .search-wrap input { font-size: .82rem; }
 }

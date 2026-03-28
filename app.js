@@ -431,33 +431,27 @@ function escHtml(str) {
 async function main() {
   initMap();
 
-  // Show spinner in sidebar
-  document.getElementById('location-list').innerHTML =
-    '<li><div class="spinner"></div></li>';
-
-  let osmLocs = [];
-  try {
-    showToast('Fetching live data from OpenStreetMap…');
-    osmLocs = await fetchFromOverpass();
-  } catch (e) {
-    console.warn('Overpass fetch failed, using curated list only.', e);
-    showToast('Using curated location list.');
-  }
-
-  allLocations = mergeLocations(osmLocs);
-
+  // Load curated locations immediately — no waiting
+  allLocations = mergeLocations([]);
   renderList(allLocations);
   renderMarkers(allLocations);
 
-  // Fit Texas bounds
   if (allLocations.length > 0) {
     const bounds = L.latLngBounds(allLocations.map(l => [l.lat, l.lng]));
     map.fitBounds(bounds.pad(0.1));
   }
 
-  if (osmLocs.length > 0) {
-    showToast(`Loaded ${osmLocs.length} live + curated locations`);
-  }
+  // Fetch live OSM data silently in the background; merge if anything new found
+  fetchFromOverpass().then(osmLocs => {
+    if (osmLocs.length === 0) return;
+    const merged = mergeLocations(osmLocs);
+    if (merged.length > allLocations.length) {
+      allLocations = merged;
+      renderList(allLocations);
+      renderMarkers(allLocations);
+      showToast(`Updated: ${allLocations.length} locations`);
+    }
+  }).catch(() => { /* OSM unavailable — curated list is fine */ });
 
   // ── Event listeners ────────────────────────────────────────────────────────
   const searchInput = document.getElementById('search');
