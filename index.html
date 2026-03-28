@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Star Stop Locator – Texas</title>
+
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet MarkerCluster CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <header>
+    <div class="logo">
+      <span class="star">&#9733;</span>
+      <span class="brand">Star Stop</span>
+      <span class="sub">Texas Locator</span>
+    </div>
+    <div class="search-wrap">
+      <input
+        id="search"
+        type="text"
+        placeholder="Search by city, address, or ZIP…"
+        autocomplete="off"
+      />
+      <button id="search-btn" title="Search">&#128269;</button>
+      <button id="locate-btn" title="Use my location">&#127358;</button>
+    </div>
+  </header>
+
+  <div class="container">
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <span id="result-count">Loading locations…</span>
+        <button id="list-toggle" title="Toggle list">&#8597;</button>
+      </div>
+      <ul id="location-list"></ul>
+    </aside>
+
+    <main id="map"></main>
+  </div>
+
+  <div id="toast"></div>
+
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet MarkerCluster JS -->
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
+  <script src="app.js"></script>
+</body>
+</html>
