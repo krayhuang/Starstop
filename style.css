@@ -186,10 +186,37 @@ header {
   color: #555;
 }
 
-.tag.fuel   { background: #fef3cd; color: #856404; }
-.tag.wash   { background: #cff4fc; color: #0a4c6a; }
-.tag.food   { background: #d1e7dd; color: #0a3622; }
-.tag.open24 { background: #e0cffc; color: #3a0a6a; }
+.tag.fuel      { background: #fef3cd; color: #856404; }
+.tag.wash      { background: #cff4fc; color: #0a4c6a; }
+.tag.food      { background: #d1e7dd; color: #0a3622; }
+.tag.open24    { background: #e0cffc; color: #3a0a6a; }
+.tag.panjwani  { background: #fde8eb; color: #a00d24; font-weight: 600; }
+.tag.regal     { background: #e8f0fe; color: #1a3a8a; font-weight: 600; }
+
+/* ── Chain filter buttons ── */
+.chain-filter {
+  display: flex;
+  gap: .35rem;
+  padding: .5rem .75rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  flex-wrap: wrap;
+}
+
+.chain-btn {
+  font-size: .72rem;
+  padding: 3px 10px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+
+.chain-btn:hover { border-color: var(--red); color: var(--red); }
+.chain-btn.active { background: var(--red); color: var(--white); border-color: var(--red); }
 
 /* ── Map ── */
 #map {

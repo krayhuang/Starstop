@@ -1,42 +1,60 @@
 // ── Star Stop Texas Locator ──────────────────────────────────────────────────
 // Uses the OpenStreetMap Overpass API to find Star Stop locations in Texas,
 // with a curated fallback list in case the API returns sparse results.
+//
+// TWO SEPARATE CHAINS operate under the "Star Stop" name in Texas:
+//   1. Panjwani Energy Star Stop  – ~140 stores, Houston/Austin/San Antonio
+//      HQ: 6161 Savoy Dr Ste 1111, Houston TX 77036 | (713) 781-4610
+//   2. Star Stop Food Marts (Regal Oil) – 16 stores, West Texas
+//      HQ: San Angelo, TX | (432) 264-7445
 
 const OVERPASS_URL = 'https://overpass-api.de/api/interpreter';
 
-// Curated list of known Star Stop locations (Houston area + Austin + San Antonio)
-// sourced from public directories, GasBuddy, Yelp, Exxon store locator
+// Verified locations sourced from Texas Comptroller tax records (opengovus.com),
+// GasBuddy, Yelp, Exxon store locator, and BBB. Coordinates are approximate.
 const KNOWN_LOCATIONS = [
-  { name: 'Star Stop #59', address: 'Houston, TX', city: 'Houston', lat: 29.7395, lng: -95.5764, fuel: true, food: true },
-  { name: 'Star Stop #60', address: 'Houston, TX', city: 'Houston', lat: 29.7518, lng: -95.5392, fuel: true, food: true },
-  { name: 'Star Stop Food Mart', address: '8255 Mills Rd, Houston, TX 77064', city: 'Houston', lat: 29.9265, lng: -95.5474, fuel: true, food: true },
-  { name: 'Star Stop', address: '1150 W Sam Houston Pkwy N, Houston, TX 77043', city: 'Houston', lat: 29.7887, lng: -95.5608, fuel: true, food: true, wash: true },
-  { name: 'Star Stop', address: '9400 Westheimer Rd, Houston, TX 77063', city: 'Houston', lat: 29.7370, lng: -95.5131, fuel: true, food: true },
-  { name: 'Star Stop', address: '7902 Bellfort Ave, Houston, TX 77061', city: 'Houston', lat: 29.6676, lng: -95.3317, fuel: true, food: true },
-  { name: 'Star Stop', address: '5345 Griggs Rd, Houston, TX 77021', city: 'Houston', lat: 29.6943, lng: -95.3489, fuel: true, food: true },
-  { name: 'Star Stop', address: '3801 Almeda Rd, Houston, TX 77004', city: 'Houston', lat: 29.7192, lng: -95.3714, fuel: true, food: true },
-  { name: 'Star Stop', address: '4411 Navigation Blvd, Houston, TX 77011', city: 'Houston', lat: 29.7344, lng: -95.3289, fuel: true, food: true },
-  { name: 'Star Stop', address: '6200 South Loop E, Houston, TX 77087', city: 'Houston', lat: 29.6770, lng: -95.3247, fuel: true, food: true },
-  { name: 'Star Stop', address: '12345 Bissonnet St, Houston, TX 77099', city: 'Houston', lat: 29.6762, lng: -95.5610, fuel: true, food: true },
-  { name: 'Star Stop', address: '10102 Harwin Dr, Houston, TX 77036', city: 'Houston', lat: 29.7015, lng: -95.5383, fuel: true, food: true },
-  { name: 'Star Stop', address: '7225 Katy Fwy, Houston, TX 77024', city: 'Houston', lat: 29.7660, lng: -95.4724, fuel: true, food: true, wash: true },
-  { name: 'Star Stop', address: '4600 Telephone Rd, Houston, TX 77087', city: 'Houston', lat: 29.6868, lng: -95.3386, fuel: true, food: true },
-  { name: 'Star Stop', address: '2800 Cullen Blvd, Houston, TX 77004', city: 'Houston', lat: 29.7065, lng: -95.3654, fuel: true, food: true },
-  { name: 'Star Stop', address: '8900 Antoine Dr, Houston, TX 77088', city: 'Houston', lat: 29.8637, lng: -95.4632, fuel: true, food: true },
-  { name: 'Star Stop', address: '6650 Fondren Rd, Houston, TX 77036', city: 'Houston', lat: 29.7148, lng: -95.5285, fuel: true, food: true },
-  { name: 'Star Stop', address: '1100 Fry Rd, Katy, TX 77449', city: 'Katy', lat: 29.7843, lng: -95.7536, fuel: true, food: true },
-  { name: 'Star Stop', address: '20810 Gulf Fwy, Webster, TX 77598', city: 'Webster', lat: 29.5274, lng: -95.1181, fuel: true, food: true },
-  { name: 'Star Stop', address: '2200 N Loop 336 W, Conroe, TX 77304', city: 'Conroe', lat: 30.3382, lng: -95.4705, fuel: true, food: true },
-  { name: 'Star Stop', address: '3925 Garth Rd, Baytown, TX 77521', city: 'Baytown', lat: 29.7601, lng: -94.9645, fuel: true, food: true },
-  { name: 'Star Stop', address: '5555 E Mockingbird Ln, Dallas, TX 75206', city: 'Dallas', lat: 32.8379, lng: -96.7601, fuel: true, food: true },
-  { name: 'Star Stop', address: '2100 W Airport Fwy, Irving, TX 75062', city: 'Irving', lat: 32.8279, lng: -97.0031, fuel: true, food: true },
-  { name: 'Star Stop', address: '1234 S Lamar Blvd, Austin, TX 78704', city: 'Austin', lat: 30.2536, lng: -97.7594, fuel: true, food: true },
-  { name: 'Star Stop', address: '8900 Research Blvd, Austin, TX 78758', city: 'Austin', lat: 30.3875, lng: -97.7165, fuel: true, food: true },
-  { name: 'Star Stop', address: '4321 Fredericksburg Rd, San Antonio, TX 78201', city: 'San Antonio', lat: 29.4749, lng: -98.5471, fuel: true, food: true },
-  { name: 'Star Stop', address: '7800 Culebra Rd, San Antonio, TX 78251', city: 'San Antonio', lat: 29.4964, lng: -98.6556, fuel: true, food: true },
-  { name: 'Star Stop', address: '2301 N Main St, Pearland, TX 77581', city: 'Pearland', lat: 29.5641, lng: -95.2861, fuel: true, food: true },
-  { name: 'Star Stop', address: '1450 FM 1960 Rd W, Houston, TX 77090', city: 'Houston', lat: 29.9791, lng: -95.4736, fuel: true, food: true },
-  { name: 'Star Stop', address: '10520 Spencer Hwy, La Porte, TX 77571', city: 'La Porte', lat: 29.6716, lng: -95.0521, fuel: true, food: true },
+
+  // ── Panjwani Energy Star Stop ─────────────────────────────────────────────
+  { name: 'Star Stop #12',  address: '2490 S Wayside Dr, Houston, TX 77023',            city: 'Houston',      lat: 29.7181, lng: -95.3289, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #49',  address: '8255 Mills Rd, Houston, TX 77064',                city: 'Houston',      lat: 29.9265, lng: -95.5474, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #52',  address: '13920 Fondren Rd, Missouri City, TX 77489',       city: 'Missouri City', lat: 29.5857, lng: -95.5285, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #53',  address: '202 North Loop W, Houston, TX 77018',             city: 'Houston',      lat: 29.8186, lng: -95.4259, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #54',  address: '13233 Dairy Ashford Rd, Sugar Land, TX 77478',   city: 'Sugar Land',   lat: 29.6235, lng: -95.6241, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #55',  address: '12503 Northwest Fwy, Houston, TX 77092',          city: 'Houston',      lat: 29.8277, lng: -95.5075, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #56',  address: '7065 Will Clayton Pkwy, Humble, TX 77338',        city: 'Humble',       lat: 29.9975, lng: -95.2596, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #59',  address: 'Houston, TX',                                     city: 'Houston',      lat: 29.7395, lng: -95.5764, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #60',  address: 'Houston, TX',                                     city: 'Houston',      lat: 29.7518, lng: -95.5392, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #75',  address: '5801 N Interstate 35, Austin, TX 78723',          city: 'Austin',       lat: 30.3289, lng: -97.7101, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #82',  address: '6903 Brodie Ln, Austin, TX 78745',                city: 'Austin',       lat: 30.1873, lng: -97.8359, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #101', address: '5823 New Territory Blvd, Sugar Land, TX 77479',  city: 'Sugar Land',   lat: 29.6096, lng: -95.6427, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #106', address: '451 TC Jester Blvd, Houston, TX 77007',           city: 'Houston',      lat: 29.7801, lng: -95.4253, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #107', address: '15640 Woodland Hills Dr, Humble, TX 77346',       city: 'Humble',       lat: 29.9773, lng: -95.1654, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #108', address: '2440 N Shepherd Dr, Houston, TX 77008',           city: 'Houston',      lat: 29.7996, lng: -95.4202, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #110', address: '1415 Studemont St, Houston, TX 77007',            city: 'Houston',      lat: 29.7671, lng: -95.4016, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #119', address: '12777 East Fwy, Houston, TX 77015',               city: 'Houston',      lat: 29.7551, lng: -95.2062, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #129', address: '11050 S Post Oak Rd, Houston, TX',                city: 'Houston',      lat: 29.6482, lng: -95.4804, fuel: true, food: true, wash: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #131', address: '2320 Meridiana Pkwy, Rosharon, TX 77583',         city: 'Rosharon',     lat: 29.3688, lng: -95.4379, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #132', address: '9811 Bissonnet St, Houston, TX 77036',            city: 'Houston',      lat: 29.6982, lng: -95.5349, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop',      address: '1150 W Sam Houston Pkwy N, Houston, TX 77043',   city: 'Houston',      lat: 29.7887, lng: -95.5608, fuel: true, food: true, open24: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop',      address: '3535 State Hwy 6 S, Houston, TX',                city: 'Houston',      lat: 29.6490, lng: -95.6355, fuel: true, food: true, open24: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop',      address: '10231 Clay Rd, Houston, TX',                     city: 'Houston',      lat: 29.8159, lng: -95.5843, fuel: true, food: true, open24: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop',      address: '1300 NASA Rd 1, Nassau Bay, TX 77058',           city: 'Nassau Bay',   lat: 29.5396, lng: -95.0832, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop',      address: '2142 E Southcross Blvd, San Antonio, TX 78210',  city: 'San Antonio',  lat: 29.3857, lng: -98.4540, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop #39',  address: '12602 Southwest Fwy, Stafford, TX 77477',        city: 'Stafford',     lat: 29.6616, lng: -95.5766, fuel: true, food: true, chain: 'Panjwani Energy' },
+  { name: 'Star Stop',      address: '2216 N Collins St, Arlington, TX 76011',         city: 'Arlington',    lat: 32.7415, lng: -97.1050, fuel: true, food: true, chain: 'Panjwani Energy' },
+
+  // ── Star Stop Food Marts (Regal Oil) – West Texas ─────────────────────────
+  { name: 'Star Stop Food Mart #1',  address: '107 S Abe St, San Angelo, TX 76903',       city: 'San Angelo', lat: 31.4558, lng: -100.4363, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart #2',  address: '2902 N Bryant Blvd, San Angelo, TX 76903', city: 'San Angelo', lat: 31.4784, lng: -100.4394, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart #4',  address: '2501 S Gregg St, Big Spring, TX 79720',    city: 'Big Spring', lat: 32.2053, lng: -101.4746, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart #7',  address: '2451 Sherwood Way, San Angelo, TX 76901',  city: 'San Angelo', lat: 31.4437, lng: -100.4777, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart #8',  address: '800 W Interstate 20, Big Spring, TX 79720',city: 'Big Spring', lat: 32.2459, lng: -101.4946, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart #12', address: 'Big Spring, TX 79720',                     city: 'Big Spring', lat: 32.2350, lng: -101.4580, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart #14', address: '4806 W Highway 80, Big Spring, TX 79720',  city: 'Big Spring', lat: 32.2452, lng: -101.5318, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart #15', address: 'San Angelo, TX 76903',                     city: 'San Angelo', lat: 31.4650, lng: -100.4500, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart #21', address: '117 S Broadway St, Mertzon, TX 76941',     city: 'Mertzon',    lat: 31.2601, lng: -100.8168, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart',     address: '400 S Gregg St, Big Spring, TX 79720',     city: 'Big Spring', lat: 32.2353, lng: -101.4746, fuel: true, food: true, chain: 'Regal Oil' },
+  { name: 'Star Stop Food Mart',     address: '303 N Divide St, Eldorado, TX 76936',      city: 'Eldorado',   lat: 30.8621, lng: -100.5991, fuel: true, food: true, chain: 'Regal Oil' },
 ];
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -200,6 +218,7 @@ function renderList(locs) {
 
 function buildTags(loc) {
   const tags = [];
+  if (loc.chain)  tags.push(`<span class="tag chain ${loc.chain === 'Regal Oil' ? 'regal' : 'panjwani'}">${escHtml(loc.chain)}</span>`);
   if (loc.fuel)   tags.push('<span class="tag fuel">Fuel</span>');
   if (loc.food)   tags.push('<span class="tag food">Food Mart</span>');
   if (loc.wash)   tags.push('<span class="tag wash">Car Wash</span>');
@@ -264,19 +283,24 @@ function highlightListItem(id) {
 }
 
 // ── Search / filter ──────────────────────────────────────────────────────────
+let activeChain = 'all';
+
 function applyFilter(query) {
   const q = query.toLowerCase().trim();
-  if (!q) {
-    renderList(allLocations);
-    renderMarkers(allLocations);
-    return;
+
+  let filtered = allLocations;
+
+  if (activeChain !== 'all') {
+    filtered = filtered.filter(loc => loc.chain === activeChain);
   }
 
-  const filtered = allLocations.filter(loc =>
-    loc.name.toLowerCase().includes(q) ||
-    (loc.address || '').toLowerCase().includes(q) ||
-    (loc.city || '').toLowerCase().includes(q)
-  );
+  if (q) {
+    filtered = filtered.filter(loc =>
+      loc.name.toLowerCase().includes(q) ||
+      (loc.address || '').toLowerCase().includes(q) ||
+      (loc.city || '').toLowerCase().includes(q)
+    );
+  }
 
   renderList(filtered);
   renderMarkers(filtered);
@@ -286,7 +310,6 @@ function applyFilter(query) {
   } else if (filtered.length === 1) {
     focusLocation(filtered[0]);
   } else {
-    // Fit map to filtered results
     const bounds = L.latLngBounds(filtered.map(l => [l.lat, l.lng]));
     map.fitBounds(bounds.pad(0.2));
   }
@@ -393,6 +416,15 @@ async function main() {
   document.getElementById('list-toggle').addEventListener('click', () => {
     const sidebar = document.getElementById('sidebar');
     sidebar.style.display = sidebar.style.display === 'none' ? '' : 'none';
+  });
+
+  document.querySelectorAll('.chain-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.chain-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeChain = btn.dataset.chain;
+      applyFilter(searchInput.value);
+    });
   });
 }
 
