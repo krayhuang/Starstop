@@ -96,7 +96,6 @@ const KNOWN_LOCATIONS = [
   { name: 'Star Stop #33',  address: '10706 N MoPac Expy, Austin, TX 78759',           city: 'Austin',        lat: 30.4145, lng: -97.7564, fuel: true, food: true },
   { name: 'Star Stop #34',  address: '4545 S Lamar Blvd, Austin, TX 78745',            city: 'Austin',        lat: 30.2258, lng: -97.7877, fuel: true, food: true },
   { name: 'Star Stop #35',  address: '3828 N IH 35, Austin, TX 78751',                 city: 'Austin',        lat: 30.2987, lng: -97.7244, fuel: true, food: true },
-  { name: 'Star Stop #36',  address: '7510 N MoPac Expy, Austin, TX 78731',            city: 'Austin',        lat: 30.3584, lng: -97.7494, fuel: true, food: true },
   { name: 'Star Stop #37',  address: '8224 Burnet Rd, Austin, TX 78757',               city: 'Austin',        lat: 30.3593, lng: -97.7268, fuel: true, food: true },
   { name: 'Star Stop #38',  address: '4912 Monterey Oaks Blvd, Austin, TX 78749',      city: 'Austin',        lat: 30.2194, lng: -97.8253, fuel: true, food: true },
   { name: 'Star Stop #40',  address: '7701 Cameron Rd, Austin, TX 78752',              city: 'Austin',        lat: 30.3391, lng: -97.6864, fuel: true, food: true },
@@ -108,7 +107,7 @@ const KNOWN_LOCATIONS = [
   { name: 'Star Stop #76',  address: '2909 W Anderson Ln, Austin, TX 78757',           city: 'Austin',        lat: 30.3594, lng: -97.7354, fuel: true, food: true },
   { name: 'Star Stop #77',  address: '13466 Hwy 183 N, Austin, TX 78750',              city: 'Austin',        lat: 30.4568, lng: -97.7830, fuel: true, food: true },
   { name: 'Star Stop #78',  address: '13775 Research Blvd, Austin, TX 78750',          city: 'Austin',        lat: 30.4340, lng: -97.7888, fuel: true, food: true },
-  { name: 'Star Stop #79',  address: '12801 FM 620 N, Austin, TX 78750',               city: 'Austin',        lat: 30.4564, lng: -97.8010, fuel: true, food: true },
+  { name: 'Star Stop #79',  address: '12801 Ranch Road 620 N, Austin, TX 78750',       city: 'Austin',        lat: 30.4564, lng: -97.8010, fuel: true, food: true },
   { name: 'Star Stop #80',  address: '409 W Palm Valley Blvd, Round Rock, TX 78664',   city: 'Round Rock',    lat: 30.5107, lng: -97.6795, fuel: true, food: true },
   { name: 'Star Stop #81',  address: '1015 Leander Rd, Georgetown, TX 78628',          city: 'Georgetown',    lat: 30.6328, lng: -97.6839, fuel: true, food: true },
   { name: 'Star Stop #82',  address: '6903 Brodie Ln, Austin, TX 78745',               city: 'Austin',        lat: 30.1873, lng: -97.8359, fuel: true, food: true },
@@ -428,7 +427,7 @@ function escHtml(str) {
 }
 
 // ── Browser-side geocoding with localStorage cache ───────────────────────────
-const GEO_CACHE_KEY = 'starstop_geocache_v2';
+const GEO_CACHE_KEY = 'starstop_geocache_v3';
 
 function loadGeoCache() {
   try { return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}'); }
