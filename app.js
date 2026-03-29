@@ -427,12 +427,75 @@ function escHtml(str) {
   return (str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Bootstrap ────────────────────────────────────────────────────────────────
+// ── Browser-side geocoding with localStorage cache ───────────────────────────
+const GEO_CACHE_KEY = 'starstop_geocache_v1';
+
+function loadGeoCache() {
+  try { return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}'); }
+  catch { return {}; }
+}
+
+function saveGeoCache(cache) {
+  try { localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache)); } catch {}
+}
+
+async function nominatimGeocode(address) {
+  const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=us`;
+  const res = await fetch(url, { headers: { 'User-Agent': 'StarStopLocator/1.0' } });
+  const data = await res.json();
+  if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lng || data[0].lon) };
+  return null;
+}
+
+// Geocodes any locations whose coords are still approximate.
+// Runs in background after initial render; updates markers as results arrive.
+async function improveCoordinates() {
+  const cache = loadGeoCache();
+  const toGeocode = allLocations.filter(loc => !cache[loc.address] && loc.address);
+  if (toGeocode.length === 0) return;
+
+  showToast(`Improving pin accuracy (${toGeocode.length} addresses)…`);
+
+  let improved = 0;
+  for (const loc of toGeocode) {
+    await new Promise(r => setTimeout(r, 1100)); // Nominatim rate limit: 1 req/s
+    try {
+      const coords = await nominatimGeocode(loc.address);
+      if (coords) {
+        cache[loc.address] = coords;
+        saveGeoCache(cache);
+        // Update the location in-place and move its marker
+        loc.lat = coords.lat;
+        loc.lng = coords.lng;
+        const marker = markers[loc.id];
+        if (marker) marker.setLatLng([coords.lat, coords.lng]);
+        improved++;
+      }
+    } catch { /* skip on error */ }
+  }
+
+  if (improved > 0) showToast(`Pin accuracy updated for ${improved} locations`);
+}
+
+// Applies cached coordinates to all locations immediately (before geocoding runs)
+function applyCachedCoords() {
+  const cache = loadGeoCache();
+  for (const loc of allLocations) {
+    const cached = cache[loc.address];
+    if (cached) { loc.lat = cached.lat; loc.lng = cached.lng; }
+  }
+}
+
+
 async function main() {
   initMap();
 
   // Load curated locations immediately — no waiting
   allLocations = mergeLocations([]);
+
+  // Apply any previously-geocoded coords from localStorage before first render
+  applyCachedCoords();
+
   renderList(allLocations);
   renderMarkers(allLocations);
 
@@ -440,6 +503,9 @@ async function main() {
     const bounds = L.latLngBounds(allLocations.map(l => [l.lat, l.lng]));
     map.fitBounds(bounds.pad(0.1));
   }
+
+  // Geocode uncached addresses in the background to improve pin accuracy
+  improveCoordinates();
 
   // Fetch live OSM data silently in the background; merge if anything new found
   fetchFromOverpass().then(osmLocs => {
