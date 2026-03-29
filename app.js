@@ -428,7 +428,7 @@ function escHtml(str) {
 }
 
 // ── Browser-side geocoding with localStorage cache ───────────────────────────
-const GEO_CACHE_KEY = 'starstop_geocache_v1';
+const GEO_CACHE_KEY = 'starstop_geocache_v2';
 
 function loadGeoCache() {
   try { return JSON.parse(localStorage.getItem(GEO_CACHE_KEY) || '{}'); }
@@ -439,11 +439,37 @@ function saveGeoCache(cache) {
   try { localStorage.setItem(GEO_CACHE_KEY, JSON.stringify(cache)); } catch {}
 }
 
+// US Census Bureau geocoder — free, no API key, very accurate for TX addresses.
+async function censusGeocode(address) {
+  const url = `https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?address=${encodeURIComponent(address)}&benchmark=4&format=json`;
+  const res = await fetch(url);
+  const data = await res.json();
+  const matches = data?.result?.addressMatches;
+  if (matches && matches.length > 0) {
+    const { x: lng, y: lat } = matches[0].coordinates;
+    return { lat, lng };
+  }
+  return null;
+}
+
+// Fallback: Nominatim (OSM) — handles some addresses Census misses.
 async function nominatimGeocode(address) {
   const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1&countrycodes=us`;
   const res = await fetch(url, { headers: { 'User-Agent': 'StarStopLocator/1.0' } });
   const data = await res.json();
-  if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lng || data[0].lon) };
+  if (data && data[0]) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  return null;
+}
+
+async function geocodeAddress(address) {
+  try {
+    const result = await censusGeocode(address);
+    if (result) return result;
+  } catch {}
+  try {
+    await new Promise(r => setTimeout(r, 200));
+    return await nominatimGeocode(address);
+  } catch {}
   return null;
 }
 
@@ -458,20 +484,17 @@ async function improveCoordinates() {
 
   let improved = 0;
   for (const loc of toGeocode) {
-    await new Promise(r => setTimeout(r, 1100)); // Nominatim rate limit: 1 req/s
-    try {
-      const coords = await nominatimGeocode(loc.address);
-      if (coords) {
-        cache[loc.address] = coords;
-        saveGeoCache(cache);
-        // Update the location in-place and move its marker
-        loc.lat = coords.lat;
-        loc.lng = coords.lng;
-        const marker = markers[loc.id];
-        if (marker) marker.setLatLng([coords.lat, coords.lng]);
-        improved++;
-      }
-    } catch { /* skip on error */ }
+    const coords = await geocodeAddress(loc.address);
+    if (coords) {
+      cache[loc.address] = coords;
+      saveGeoCache(cache);
+      loc.lat = coords.lat;
+      loc.lng = coords.lng;
+      const marker = markers[loc.id];
+      if (marker) marker.setLatLng([coords.lat, coords.lng]);
+      improved++;
+    }
+    await new Promise(r => setTimeout(r, 300)); // Census has no strict rate limit
   }
 
   if (improved > 0) showToast(`Pin accuracy updated for ${improved} locations`);
